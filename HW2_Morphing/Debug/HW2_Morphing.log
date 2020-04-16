@@ -1,0 +1,2 @@
+﻿  morphing.cpp
+d:\ncku\computer_graph_application\hw2_image_morphing\hw2_morphing\hw2_morphing\morphing.cpp(1): fatal error C1083: 無法開啟包含檔案: 'opencv2/imgproc/imgproc.hpp': No such file or directory

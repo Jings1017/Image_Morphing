@@ -69,12 +69,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\NCKU\Computer_Graph_Application\HW2_Image_Morphing\HW2_Morphing\opencv\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\NCKU\Computer_Graph_Application\HW2_Image_Morphing\HW2_Morphing\opencv\build\x64\vc14\bin;D:\NCKU\Computer_Graph_Application\HW2_Image_Morphing\HW2_Morphing\opencv\build\x64\vc14\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>./include;$(IncludePath)</IncludePath>
+    <LibraryPath>../lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\NCKU\Computer_Graph_Application\HW2_Image_Morphing\HW2_Morphing\opencv\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\NCKU\Computer_Graph_Application\HW2_Image_Morphing\HW2_Morphing\opencv\build\x64\vc14\bin;D:\NCKU\Computer_Graph_Application\HW2_Image_Morphing\HW2_Morphing\opencv\build\x64\vc14\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>./include;$(IncludePath)</IncludePath>
+    <LibraryPath>../lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

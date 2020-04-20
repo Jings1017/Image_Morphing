@@ -28,11 +28,8 @@
 
 步驟如下
 1. 選擇Release x64 執行， 會先跑出含有兩張原圖的視窗
-![](https://i.imgur.com/vtlyOoh.png)
-
 2. 繪製方式為在起點按下滑鼠右鍵不放，拖曳到目標點，放開右鍵
 3. 先對左圖進行特徵線繪製
 4. 再對右圖進行特徵點繪製
-![](https://i.imgur.com/oP2SLFq.png)
 5. 繪製完成，按下中間morphing按鈕，產生結果(共有四張)
-![](https://i.imgur.com/aLXJPx6.jpg)
+![](./HW2_Morphing/morphing_result.png)

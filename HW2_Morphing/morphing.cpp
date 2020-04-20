@@ -3,17 +3,19 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 
 #define img1_x 50
-#define img1_y 70
+#define img1_y 50
 #define img2_x 500
-#define img2_y 70
+#define img2_y 50
 
 using namespace cv;
 using namespace std;
 
 Mat OutputImage = Mat::zeros(Size(800, 300), CV_8UC3);
 Mat image1, image2, morph_button;
+Mat result14, result24, result34;
 
 Point image1_start, image1_end, image2_start, image2_end;
 Point image1_original (img1_x,img1_y), image2_original(img2_x, img2_y);
@@ -24,19 +26,12 @@ bool img2_start_check = false, img2_end_check = false, button_true = false;
 
 int image1_arrow_index = 0, image2_arrow_index = 0;
 
-Point perpendicular(Point p) {
+Point perp(Point p) {
 	Point transform(p.y, -p.x);
 	return transform;
 }
 
 void morphing() {
-
-	cv::namedWindow("t = 0", 1);
-	cv::namedWindow("t = 0.25", 1);
-	cv::namedWindow("t = 0.5", 1);
-	cv::namedWindow("t = 0.75", 1);
-	cv::namedWindow("t = 1", 1);
-
 	Mat one2two_14, one2two_24, one2two_34;
 	Mat two2one_14, two2one_24, two2one_34;
 	Mat mix_14, mix_24, mix_34;
@@ -49,9 +44,20 @@ void morphing() {
 	Mat mapx_24_2, mapy_24_2;
 	Mat mapx_34_2, mapy_34_2;
 
-	Point X, X_prime, XSum;
-	double u, v, weight, WeightSum, dist;
-	int arrow_num;
+	Point  X, X_prime, XSum21, XSum12;
+	double u, v, weight, WeightSum21, WeightSum12, dist;
+	int arrow_num = min(image1_arrow_index, image2_arrow_index);
+
+	one2two_14.create(image1.size(), CV_32FC1);
+	one2two_24.create(image1.size(), CV_32FC1);
+	one2two_34.create(image1.size(), CV_32FC1);
+	two2one_14.create(image1.size(), CV_32FC1);
+	two2one_24.create(image1.size(), CV_32FC1);
+	two2one_34.create(image1.size(), CV_32FC1);
+
+	mix_14.create(image1.size(), CV_32FC1);
+	mix_24.create(image1.size(), CV_32FC1);
+	mix_34.create(image1.size(), CV_32FC1);
 
 	mapx_14.create(image1.size(), CV_32FC1);
 	mapy_14.create(image1.size(), CV_32FC1);
@@ -68,37 +74,28 @@ void morphing() {
 	mapy_34_2.create(image1.size(), CV_32FC1);
 
 	for (int x = 0; x < image1.cols; x++) {
-		// 2->1
 		for (int y = 0; y < image1.rows; y++) {
-			X.x = x;
-			X.y = y;
-			XSum.x = 0;
-			XSum.y = 0;
-			u = 0;
-			v = 0;
-			weight = 0;
-			WeightSum = 0.0;
-
-			if (image1_arrow_index > image2_arrow_index)
-				arrow_num = image2_arrow_index;
-			else
-				arrow_num = image1_arrow_index;
+			X = Point(x, y);
+			XSum21 = Point(0, 0);
+			XSum12 = Point(0, 0);
+			WeightSum21 = 0.0;
+			WeightSum12 = 0.0;
 
 			for (int z = 0; z < arrow_num; z++) {
-
+				// 2->1
 				// u  = (X-P)*(Q-P) / ||Q-P||^2
-				u = ((double)((Q[z] - P[z]).x * (X - P[z]).x + (Q[z] - P[z]).y * (X - P[z]).y)) /
-					(pow((double)(((Q[z] - P[z]).x)), 2) + pow((double)(((Q[z] - P[z]).y)), 2));
+				u = (((Q[z] - P[z]).x * (X - P[z]).x + (Q[z] - P[z]).y * (X - P[z]).y)) /
+					(pow((((Q[z] - P[z]).x)), 2) + pow((((Q[z] - P[z]).y)), 2));
 
 				// v = (X-P)*Perpendicular(Q-P) / ||Q-P||
-				v = ((double)((X - P[z]).x * (Q[z] - P[z]).y - (X - P[z]).y * (Q[z] - P[z]).x)) /
-					(pow((pow((double)(((Q[z] - P[z]).x)), 2) + pow((double)(((Q[z] - P[z]).y)), 2)), 0.5));
+				v = (((X - P[z]).x * (Q[z] - P[z]).y - (X - P[z]).y * (Q[z] - P[z]).x)) /
+					(pow((pow((((Q[z] - P[z]).x)), 2) + pow((((Q[z] - P[z]).y)), 2)), 0.5));
 
 				// X' = P' + u*(Q'-P') + v*Perpendicular(Q'-P') / || Q'-P'||
-				X_prime = P_prime[z] + u * (Q_prime[z] - P_prime[z]) + v * perpendicular(Q_prime[z] - P_prime[z]) /
-					(pow((pow((double)(((Q_prime[z] - P_prime[z]).x)), 2) + pow((double)(((Q_prime[z] - P_prime[z]).y)), 2)), 0.5));
+				X_prime = P_prime[z] + u * (Q_prime[z] - P_prime[z]) + v * perp(Q_prime[z] - P_prime[z]) /
+					(pow((pow((((Q_prime[z] - P_prime[z]).x)), 2) + pow((((Q_prime[z] - P_prime[z]).y)), 2)), 0.5));
 
-				// weight[i] = [ ( length[i]^p ) / ( a + dist[i] ) ] ^b
+				// weight[z] = [ ( length[z]^p ) / ( a + dist[z] ) ] ^b
 				// a = 1 , b = 2 , p = 0 
 				if (u < 0)
 					dist = pow(pow((X_prime - P_prime[z]).x, 2) + pow((X_prime - P_prime[z]).y, 2), 0.5);
@@ -108,46 +105,25 @@ void morphing() {
 					dist = abs(v);
 				weight = pow((pow(pow((Q[z] - P[z]).x, 2) + pow((Q[z] - P[z]).y, 2), 0.5) / (1 + dist)), 2);
 
-				// XSum = Xsum + X'[i]*weight
-				XSum = XSum + X_prime * weight;
-				// WeightSum += weight[i]
-				WeightSum = WeightSum + weight;
-			}
-			mapx_14.at<float>(y, x) = (((XSum / WeightSum) - X)*0.75 + X).x;
-			mapy_14.at<float>(y, x) = (((XSum / WeightSum) - X)*0.75 + X).y;
-			mapx_24.at<float>(y, x) = (((XSum / WeightSum) - X)*0.5  + X).x;
-			mapy_24.at<float>(y, x) = (((XSum / WeightSum) - X)*0.5  + X).y;
-			mapx_34.at<float>(y, x) = (((XSum / WeightSum) - X)*0.25 + X).x;
-			mapy_34.at<float>(y, x) = (((XSum / WeightSum) - X)*0.25 + X).y;
-		}
+				// XSum = Xsum + X'[z]*weight
+				XSum21 = XSum21 + X_prime * weight;
+				// WeightSum += weight[z]
+				WeightSum21 = WeightSum21 + weight;
 
-		// 1->2
-		for (int y = 0; y < image1.rows; y++) {
-			X.x = x;
-			X.y = y;
-			XSum.x = 0;
-			XSum.y = 0;
-			u = 0;
-			v = 0;
-			weight = 0;
-			WeightSum = 0.0;
+				// 1->2
+				// u  = (X-P')*(Q'-P') / ||Q'-P'||^2
+				u = (((Q_prime[z] - P_prime[z]).x*(X - P_prime[z]).x + (Q_prime[z] - P_prime[z]).y*(X - P_prime[z]).y)) /
+					(pow((((Q_prime[z] - P_prime[z]).x)), 2) + pow((((Q_prime[z] - P_prime[z]).y)), 2));
 
-			for (int z = 0; z < arrow_num; z++) {
-				// u  = (X-P)*(Q-P) / ||Q-P||^2
-				u = ((double)((Q_prime[z] - P_prime[z]).x*(X - P_prime[z]).x +
-					(Q_prime[z] - P_prime[z]).y*(X - P_prime[z]).y)) /
-					(pow((double)(((Q_prime[z] - P_prime[z]).x)), 2) + pow((double)(((Q_prime[z] - P_prime[z]).y)), 2));
+				// v = (X-P')*Perpendicular(Q'-P') / ||Q'-P'||
+				v = (((X - P_prime[z]).x*(Q_prime[z] - P_prime[z]).y - (X - P_prime[z]).y*(Q_prime[z] - P_prime[z]).x)) /
+					(pow((pow((((Q_prime[z] - P_prime[z]).x)), 2) + pow((((Q_prime[z] - P_prime[z]).y)), 2)), 0.5));
 
-				// v = (X-P)*Perpendicular(Q-P) / ||Q-P||
-				v = ((double)((X - P_prime[z]).x*(Q_prime[z] - P_prime[z]).y -
-					(X - P_prime[z]).y*(Q_prime[z] - P_prime[z]).x)) /
-					(pow((pow((double)(((Q_prime[z] - P_prime[z]).x)), 2) + pow((double)(((Q_prime[z] - P_prime[z]).y)), 2)), 0.5));
+				// X' = P + u*(Q-P) + v*Perpendicular(Q-P) / || Q-P||
+				X_prime = P[z] + u * (Q[z] - P[z]) + v * perp(Q[z] - P[z]) /
+					(pow((pow((((Q[z] - P[z]).x)), 2) + pow((((Q[z] - P[z]).y)), 2)), 0.5));
 
-				// X' = P' + u*(Q'-P') + v*Perpendicular(Q'-P') / || Q'-P'||
-				X_prime = P[z] + u * (Q[z] - P[z]) + v * perpendicular(Q[z] - P[z]) /
-					(pow((pow((double)(((Q[z] - P[z]).x)), 2) + pow((double)(((Q[z] - P[z]).y)), 2)), 0.5));
-
-				// weight[i] = [ ( length[i]^p ) / ( a + dist[i] ) ] ^b
+				// weight[z] = [ ( length[z]^p ) / ( a + dist[z] ) ] ^b
 				// a = 1 , b = 2 , p = 0 
 				if (u < 0)
 					dist = pow(pow((X_prime - P_prime[z]).x, 2) + pow((X_prime - P_prime[z]).y, 2), 0.5);
@@ -157,37 +133,56 @@ void morphing() {
 					dist = abs(v);
 				weight = pow((pow(pow((Q[z] - P[z]).x, 2) + pow((Q[z] - P[z]).y, 2), 0.5) / (1 + dist)), 2);
 
-				// XSum = Xsum + X'[i]*weight
-				XSum = XSum + X_prime * weight;
-				// WeightSum += weight[i]
-				WeightSum = WeightSum + weight;
+				// XSum = Xsum + X'[z]*weight
+				XSum12 = XSum12 + X_prime * weight;
+				// WeightSum += weight[z]
+				WeightSum12 = WeightSum12 + weight;
 			}
-			mapx_14_2.at<float>(y, x) = (((XSum / WeightSum) - X)*0.25 + X).x;
-			mapy_14_2.at<float>(y, x) = (((XSum / WeightSum) - X)*0.25 + X).y;
-			mapx_24_2.at<float>(y, x) = (((XSum / WeightSum) - X)*0.5 + X).x;
-			mapy_24_2.at<float>(y, x) = (((XSum / WeightSum) - X)*0.5 + X).y;
-			mapx_34_2.at<float>(y, x) = (((XSum / WeightSum) - X)*0.75 + X).x;
-			mapy_34_2.at<float>(y, x) = (((XSum / WeightSum) - X)*0.75 + X).y;
+			
+			mapx_14.at<float>(Point(x, y)) = ((XSum21 / WeightSum21)*0.75 + X*0.25).x;
+			mapy_14.at<float>(Point(x, y)) = ((XSum21 / WeightSum21)*0.75 + X*0.25).y;
+			mapx_24.at<float>(Point(x, y)) = ((XSum21 / WeightSum21)*0.5  + X*0.5 ).x;
+			mapy_24.at<float>(Point(x, y)) = ((XSum21 / WeightSum21)*0.5  + X*0.5 ).y;
+			mapx_34.at<float>(Point(x, y)) = ((XSum21 / WeightSum21)*0.25 + X*0.75).x;
+			mapy_34.at<float>(Point(x, y)) = ((XSum21 / WeightSum21)*0.25 + X*0.75).y;
+
+			mapx_14_2.at<float>(Point(x, y)) = ((XSum12 / WeightSum12)*0.25 + X*0.75).x;
+			mapy_14_2.at<float>(Point(x, y)) = ((XSum12 / WeightSum12)*0.25 + X*0.75).y;
+			mapx_24_2.at<float>(Point(x, y)) = ((XSum12 / WeightSum12)*0.5 + X*0.5).x;
+			mapy_24_2.at<float>(Point(x, y)) = ((XSum12 / WeightSum12)*0.5 + X*0.5).y;
+			mapx_34_2.at<float>(Point(x, y)) = ((XSum12 / WeightSum12)*0.75 + X*0.25).x;
+			mapy_34_2.at<float>(Point(x, y)) = ((XSum12 / WeightSum12)*0.75 + X*0.25).y;
 		}
 	}
 	
-	remap(image2, two2one_14, mapx_14, mapy_14, INTER_LINEAR);
-	remap(image2, two2one_24, mapx_24, mapy_24, INTER_LINEAR);
-	remap(image2, two2one_34, mapx_34, mapy_34, INTER_LINEAR);
+	cv::remap(image2, two2one_14, mapx_14, mapy_14, INTER_LINEAR);
+	cv::remap(image2, two2one_24, mapx_24, mapy_24, INTER_LINEAR);
+	cv::remap(image2, two2one_34, mapx_34, mapy_34, INTER_LINEAR);
 
-	remap(image1, one2two_14, mapx_14_2, mapy_14_2, INTER_LINEAR);
-	remap(image1, one2two_24, mapx_24_2, mapy_24_2, INTER_LINEAR);
-	remap(image1, one2two_34, mapx_34_2, mapy_34_2, INTER_LINEAR);
+	cv::remap(image1, one2two_14, mapx_14_2, mapy_14_2, INTER_LINEAR);
+	cv::remap(image1, one2two_24, mapx_24_2, mapy_24_2, INTER_LINEAR);
+	cv::remap(image1, one2two_34, mapx_34_2, mapy_34_2, INTER_LINEAR);
 	
-	addWeighted(one2two_14, 0.75, two2one_14, 0.25, 0.0, mix_14);
-	addWeighted(one2two_24, 0.5,  two2one_24, 0.5 , 0.0, mix_24);
-	addWeighted(one2two_34, 0.25, two2one_34, 0.75, 0.0, mix_34);
+	cv::addWeighted(one2two_14, 0.75, two2one_14, 0.25, 0.0, mix_14);
+	cv::addWeighted(one2two_24, 0.5,  two2one_24, 0.5 , 0.0, mix_24);
+	cv::addWeighted(one2two_34, 0.25, two2one_34, 0.75, 0.0, mix_34);
+
+	cv::namedWindow("t = 0", WINDOW_AUTOSIZE);
+	cv::namedWindow("t = 0.25", WINDOW_AUTOSIZE);
+	cv::namedWindow("t = 0.5", WINDOW_AUTOSIZE);
+	cv::namedWindow("t = 0.75", WINDOW_AUTOSIZE);
+	cv::namedWindow("t = 1", WINDOW_AUTOSIZE);
 
 	cv::imshow("t = 0", image1);
 	cv::imshow("t = 0.25", mix_14);
 	cv::imshow("t = 0.5", mix_24);
 	cv::imshow("t = 0.75", mix_34);
 	cv::imshow("t = 1", image2);
+
+	cv::imwrite("t025.jpg", mix_14);
+	cv::imwrite("t050.jpg", mix_24);
+	cv::imwrite("t075.jpg", mix_34);
+
 }
 
 void CallBack(int event, int x, int y, int flags, void* userdata)
@@ -198,7 +193,7 @@ void CallBack(int event, int x, int y, int flags, void* userdata)
 		// press mouse
 		if (event == EVENT_LBUTTONDOWN)
 		{
-			std::cout << "in image1" << endl;
+			std::cout << "image1" << endl;
 			std::cout << "start at (" << x - image1_original.x << ", " << y - image1_original.y << ")" << endl;
 			image1_start = Point(x, y);
 			img1_start_check = true;
@@ -210,8 +205,7 @@ void CallBack(int event, int x, int y, int flags, void* userdata)
 			image1_end = Point(x, y);
 			img1_end_check = true;
 			if (img1_start_check == true && img1_end_check == true) {
-				// draw the arrowed line 
-				arrowedLine(OutputImage, image1_start, image1_end, Scalar(255, 255, 255), 2);
+				arrowedLine(OutputImage, image1_start, image1_end, Scalar(0, 255, 255), 3);
 				P[image1_arrow_index] = image1_start - image1_original;
 				Q[image1_arrow_index] = image1_end - image1_original;
 				image1_arrow_index++;
@@ -226,7 +220,7 @@ void CallBack(int event, int x, int y, int flags, void* userdata)
 		// press mouse 
 		if (event == EVENT_LBUTTONDOWN)
 		{
-			std::cout << "in image2" << endl;
+			std::cout << "image2" << endl;
 			std::cout << "start at (" << x - image2_original.x << ", " << y - image2_original.y << ")" << endl;
 			image2_start = Point(x, y);
 			img2_start_check = true;
@@ -239,7 +233,7 @@ void CallBack(int event, int x, int y, int flags, void* userdata)
 			img2_end_check = true;
 
 			if (img2_start_check == true && img2_end_check == true) {
-				arrowedLine(OutputImage, image2_start, image2_end, Scalar(255, 255, 255), 2);
+				arrowedLine(OutputImage, image2_start, image2_end, Scalar(0, 255, 255), 3);
 				P_prime[image2_arrow_index] = image2_start - image2_original;
 				Q_prime[image2_arrow_index] = image2_end - image2_original;
 				image2_arrow_index++;
@@ -269,7 +263,6 @@ int main(int argc, char** argv)
 	image1 = imread("women.jpg");
 	image2 = imread("cheetah.jpg");
 	morph_button = imread("morph_button.png");
-	resize(morph_button, morph_button, Size(160, 80));
 
 	if (!image1.data || !image2.data || !morph_button.data)
 	{
@@ -282,16 +275,14 @@ int main(int argc, char** argv)
 	Rect button_R(325, 70, 160, 80);
 	image1.copyTo(OutputImage(R1));
 	image2.copyTo(OutputImage(R2));
+	resize(morph_button, morph_button, Size(160, 80));
 	morph_button.copyTo(OutputImage(button_R));
 
 	std::cout << "img1 row: " << image1.rows << " col: " << image1.cols << endl;
 	std::cout << "img2 row: " << image2.rows << " col: " << image2.cols << endl;
 
-	cv::putText(OutputImage, "image1", Point(130, 50), FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(255, 255, 255), 2);
-	cv::putText(OutputImage, "image2", Point(580, 50), FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(255, 255, 255), 2);
-
-	cv::namedWindow("Morphing", 1);
-	cv::setMouseCallback("Morphing", CallBack, NULL);
+	cv::namedWindow("Morphing", WINDOW_AUTOSIZE);
+	cv::setMouseCallback("Morphing", CallBack);
 	cv::imshow("Morphing", OutputImage);
 	cv::waitKey(0);
 	cv::destroyWindow("Morphing");

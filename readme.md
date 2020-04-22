@@ -2,7 +2,7 @@
 
 ### 作業環境: 
 
-    Windows10 / Visual Studio 2015 / opencv
+    Windows10 / Visual Studio 2015 / opencv 3.4.3
 
 ### 方法說明:
 
@@ -31,5 +31,5 @@
 2. 繪製方式為在起點按下滑鼠右鍵不放，拖曳到目標點，放開右鍵
 3. 先對左圖進行特徵線繪製
 4. 再對右圖進行特徵點繪製
-5. 繪製完成，按下中間morphing按鈕，產生結果(共有四張)
+5. 繪製完成，按下中間morphing按鈕，產生結果
 ![](./HW2_Morphing/morphing_result.png)
